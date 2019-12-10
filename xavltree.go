@@ -4,9 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"math/rand"
-	"reflect"
-	"runtime"
-	"strings"
 	"time"
 )
 
@@ -14,7 +11,7 @@ import (
 type node struct {
 	left   *node
 	right  *node
-	key    interface{}
+	key    uint64
 	value  interface{}
 	height int
 }
@@ -22,76 +19,25 @@ type node struct {
 // Tree object
 type Tree struct {
 	root  *node
-	cmp   comparator
 	count int
 }
 
 // NewIntKeys create new empty tree with int keys
-func NewIntKeys() *Tree {
-	return &Tree{
-		cmp: intComparator,
-	}
-}
-
-// NewInt64Keys create new empty tree with int64 keys
-func NewInt64Keys() *Tree {
-	return &Tree{
-		cmp: int64Comparator,
-	}
-}
-
-// NewStrKeys create new empty tree with float64 keys
-func NewFloat64Keys() *Tree {
-	return &Tree{
-		cmp: float64Comparator,
-	}
-}
-
-// NewStrKeys create new empty tree with string keys
-func NewStrKeys() *Tree {
-	return &Tree{
-		cmp: stringComparator,
-	}
-}
-
-func getFunctionName(i interface{}) string {
-	return runtime.FuncForPC(reflect.ValueOf(i).Pointer()).Name()
+func NewTree() *Tree {
+	return &Tree{}
 }
 
 // TestElements create test tree
 func (t *Tree) TestElements(count int) {
 	var r = rand.New(rand.NewSource(time.Now().UnixNano()))
-	rawfName := getFunctionName(t.cmp)
-	arr := strings.Split(rawfName, ".")
-	switch arr[len(arr)-1] {
-	case "intComparator":
-		for i := 0; i < count; i++ {
-			t.Add(r.Intn(9999), i)
-		}
-	case "int64Comparator":
-		for i := 0; i < count; i++ {
-			t.Add(r.Int63n(9999999999999999), i)
-		}
-	case "float64Comparator":
-		for i := 0; i < count; i++ {
-			t.Add(r.Float64()*9999, i)
-		}
-	case "stringComparator":
-		letterBytes := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-		for i := 0; i < count; i++ {
-			b := make([]byte, 8)
-			for i := range b {
-				b[i] = letterBytes[r.Int63()%int64(len(letterBytes))]
-			}
-			t.Add(string(b), i)
-		}
+	for i := 0; i < count; i++ {
+		t.Add(uint64(r.Intn(9999)), i)
 	}
-
 }
 
 // Add new node to the tree
-func (t *Tree) Add(key interface{}, value interface{}) (err error) {
-	t.root, err = t.root.add(key, value, t.cmp)
+func (t *Tree) Add(key uint64, value interface{}) (err error) {
+	t.root = t.root.add(key, value)
 	if err != nil {
 		return err
 	}
@@ -100,25 +46,23 @@ func (t *Tree) Add(key interface{}, value interface{}) (err error) {
 }
 
 // Remove node from tree by key
-func (t *Tree) Remove(key interface{}) (error, bool) {
+func (t *Tree) Remove(key uint64) (error, bool) {
 	if t.root == nil {
 		return errors.New("Cannot remove from an empty tree"), false
 	}
-	_, ok, err := t.root.remove(key, t.cmp)
-	if err != nil {
-		return err, false
-	}
+	_, ok := t.root.remove(key)
 	if ok {
 		t.count--
 	}
 	return nil, ok
 }
 
-func (t *Tree) Get(key interface{}) (interface{}, bool, error) {
+// Get element from tree
+func (t *Tree) Get(key uint64) (interface{}, bool) {
 	if t.root == nil {
-		return nil, false, errors.New("Cannot get from an empty tree")
+		return nil, false
 	}
-	return t.root.get(key, t.cmp)
+	return t.root.get(key)
 }
 
 // Count return number of elements
@@ -127,7 +71,7 @@ func (t *Tree) Count() int {
 }
 
 // Min returm min element from the tree
-func (t *Tree) Min() (interface{}, interface{}, error) {
+func (t *Tree) Min() (uint64, interface{}, error) {
 	if t.root == nil {
 		return 0, nil, errors.New("empty tree")
 	}
@@ -136,7 +80,7 @@ func (t *Tree) Min() (interface{}, interface{}, error) {
 }
 
 // Max returm max element from the tree
-func (t *Tree) Max() (interface{}, interface{}, error) {
+func (t *Tree) Max() (uint64, interface{}, error) {
 	if t.root == nil {
 		return 0, nil, errors.New("empty tree")
 	}
@@ -171,22 +115,18 @@ func Traverse(n *node, f func(*node)) {
 // ==== local funcs ============================================================
 
 // add local method
-func (n *node) add(key interface{}, value interface{}, cmp comparator) (*node, error) {
+func (n *node) add(key uint64, value interface{}) *node {
 	if n == nil {
-		return &node{nil, nil, key, value, 1}, nil
+		return &node{nil, nil, key, value, 1}
 	}
-	res, err := cmp(key, n.key)
-	if err != nil {
-		return nil, err
-	}
-	if res == 1 {
-		n.right, err = n.right.add(key, value, cmp)
-	} else if res == -1 {
-		n.left, err = n.left.add(key, value, cmp)
+	if key > n.key {
+		n.right = n.right.add(key, value)
+	} else if key < n.key {
+		n.left = n.left.add(key, value)
 	} else {
 		n.key = key
 	}
-	return n.rebalanceTree(), err
+	return n.rebalanceTree()
 }
 
 // findMin -
@@ -199,57 +139,50 @@ func (n *node) findMin() *node {
 }
 
 // remove -
-func (n *node) remove(key interface{}, cmp comparator) (*node, bool, error) {
+func (n *node) remove(key uint64) (*node, bool) {
 	exist := false
 	if n == nil {
-		return nil, exist, nil
+		return nil, exist
 	}
-	res, err := cmp(key, n.key)
-	if err != nil {
-		return nil, false, err
-	}
-	if res == -1 {
-		n.left, exist, err = n.left.remove(key, cmp)
-	} else if res == 1 {
-		n.right, exist, err = n.right.remove(key, cmp)
+
+	if key < n.key {
+		n.left, exist = n.left.remove(key)
+	} else if key > n.key {
+		n.right, exist = n.right.remove(key)
 	} else {
 		exist = true
 		if n.left != nil && n.right != nil {
 			rightMinNode := n.right.findMin()
 			n.key = rightMinNode.key
-			n.right, exist, err = n.right.remove(rightMinNode.key, cmp)
+			n.right, exist = n.right.remove(rightMinNode.key)
 		} else if n.left != nil {
 			n = n.left
 		} else if n.right != nil {
 			n = n.right
 		} else {
 			n = nil
-			return n, exist, err
+			return n, exist
 		}
 	}
-	return n.rebalanceTree(), exist, err
+	return n.rebalanceTree(), exist
 }
 
 // get -
-func (n *node) get(key interface{}, cmp comparator) (interface{}, bool, error) {
+func (n *node) get(key uint64) (interface{}, bool) {
 	if n == nil {
-		return 0, false, nil
+		return 0, false
 	}
-	res, err := cmp(key, n.key)
-	if err != nil {
-		return nil, false, err
-	}
-	if res == 1 {
-		return n.right.get(key, cmp)
-	} else if res == -1 {
-		return n.left.get(key, cmp)
+	if key > n.key {
+		return n.right.get(key)
+	} else if key < n.key {
+		return n.left.get(key)
 	} else {
-		return n.value, true, nil
+		return n.value, true
 	}
 }
 
 // max -
-func (n *node) max() (interface{}, interface{}) {
+func (n *node) max() (uint64, interface{}) {
 	if n.right == nil {
 		return n.key, n.value
 	}
@@ -257,7 +190,7 @@ func (n *node) max() (interface{}, interface{}) {
 }
 
 // min -
-func (n *node) min() (interface{}, interface{}) {
+func (n *node) min() (uint64, interface{}) {
 	if n.left == nil {
 		return n.key, n.value
 	}
