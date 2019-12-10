@@ -111,7 +111,7 @@ func TestIntKeysMethods(t *testing.T) {
 			t.Error("Min method:", "bad object")
 		}
 	}
-	PrintTree(tree.root, 0)
+	//PrintTree(tree.root, 0)
 }
 
 // ========== BENCHMARKS =======================================================
