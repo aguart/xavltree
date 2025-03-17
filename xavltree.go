@@ -3,8 +3,6 @@ package xavltree
 import (
 	"errors"
 	"fmt"
-	"math/rand"
-	"time"
 )
 
 // node object
@@ -22,27 +20,16 @@ type Tree struct {
 	count int
 }
 
-// NewIntKeys create new empty tree with int keys
+// NewTree create new empty tree with int keys
 func NewTree() *Tree {
 	return &Tree{}
 }
 
-// TestElements create test tree
-func (t *Tree) TestElements(count int) {
-	var r = rand.New(rand.NewSource(time.Now().UnixNano()))
-	for i := 0; i < count; i++ {
-		t.Add(uint64(r.Intn(9999)), i)
-	}
-}
-
 // Add new node to the tree
-func (t *Tree) Add(key uint64, value interface{}) (err error) {
+func (t *Tree) Add(key uint64, value interface{}) {
 	t.root = t.root.add(key, value)
-	if err != nil {
-		return err
-	}
 	t.count++
-	return nil
+	return
 }
 
 // Remove node from tree by key
@@ -79,7 +66,7 @@ func (t *Tree) Min() (uint64, interface{}, error) {
 	return key, val, nil
 }
 
-// Max returm max element from the tree
+// Max returm maximum element from the tree
 func (t *Tree) Max() (uint64, interface{}, error) {
 	if t.root == nil {
 		return 0, nil, errors.New("empty tree")
@@ -112,8 +99,6 @@ func Traverse(n *node, f func(*node)) {
 	Traverse(n.right, f)
 }
 
-// ==== local funcs ============================================================
-
 // add local method
 func (n *node) add(key uint64, value interface{}) *node {
 	if n == nil {
@@ -126,7 +111,7 @@ func (n *node) add(key uint64, value interface{}) *node {
 	} else {
 		n.key = key
 	}
-	return n.rebalanceTree()
+	return n.reBalanceTree()
 }
 
 // findMin -
@@ -140,11 +125,10 @@ func (n *node) findMin() *node {
 
 // remove -
 func (n *node) remove(key uint64) (*node, bool) {
-	exist := false
 	if n == nil {
-		return nil, exist
+		return nil, false
 	}
-
+	var exist bool
 	if key < n.key {
 		n.left, exist = n.left.remove(key)
 	} else if key > n.key {
@@ -164,7 +148,7 @@ func (n *node) remove(key uint64) (*node, bool) {
 			return n, exist
 		}
 	}
-	return n.rebalanceTree(), exist
+	return n.reBalanceTree(), exist
 }
 
 // get -
@@ -197,8 +181,6 @@ func (n *node) min() (uint64, interface{}) {
 	return n.left.min()
 }
 
-// === methods for AVL balansing ===============================================
-
 // getHeight -
 func (n *node) getHeight() int {
 	if n == nil {
@@ -209,11 +191,11 @@ func (n *node) getHeight() int {
 
 // recalculateHeight -
 func (n *node) recalculateHeight() {
-	n.height = 1 + max(n.left.getHeight(), n.right.getHeight())
+	n.height = 1 + maximum(n.left.getHeight(), n.right.getHeight())
 }
 
-// max -
-func max(a int, b int) int {
+// maximum -
+func maximum(a int, b int) int {
 	if a > b {
 		return a
 	}
@@ -242,8 +224,8 @@ func (n *node) rotateRight() *node {
 	return newRoot
 }
 
-// rebalanceTree checks if node is balanced and rebalance
-func (n *node) rebalanceTree() *node {
+// reBalanceTree checks if node is balanced and rebalance
+func (n *node) reBalanceTree() *node {
 	if n == nil {
 		return n
 	}

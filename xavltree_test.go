@@ -27,7 +27,7 @@ func TestIntKeysMethods(t *testing.T) {
 		count2 int
 		// test index
 		idx uint64 = 3421
-		// max index
+		// maximum index
 		maxIdx uint64 = 10000
 		// min index
 		minIdx uint64 = 0
@@ -39,21 +39,17 @@ func TestIntKeysMethods(t *testing.T) {
 
 	// create and fill the tree
 	tree := NewTree()
-	tree.TestElements(25)
+	tree.testElements(25)
 	// get count
 	count0 = tree.Count()
 
 	// ==== testing add ========================================================
-	err = tree.Add(idx, obj)
-	if err != nil {
-		t.Error("Add method:", err)
-	} else {
-		// get count after add
-		count1 = tree.Count()
-		// compare counts
-		if count0 == count1 {
-			t.Error("Add method:", "Error calculate count after Add")
-		}
+	tree.Add(idx, obj)
+	// get count after add
+	count1 = tree.Count()
+	// compare counts
+	if count0 == count1 {
+		t.Error("Add method:", "Error calculate count after Add")
 	}
 
 	// ==== testing get ========================================================
@@ -134,9 +130,8 @@ func newSlice(count int) *slice {
 	return s
 }
 
-func (s *slice) insert(value int) error {
+func (s *slice) insert(value int) {
 	*s = append(*s, value)
-	return nil
 }
 
 func (s *slice) find(item int) (int, bool) {
@@ -172,7 +167,7 @@ func BenchmarkFindGBtree(b *testing.B) {
 
 func BenchmarkFindxAVLTree(b *testing.B) {
 	tr := NewTree()
-	tr.TestElements(countBench)
+	tr.testElements(countBench)
 	tr.Add(findElement, nil)
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -189,5 +184,13 @@ func BenchmarkFindBasicLib(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		_, _ = s.find(int(findElement))
+	}
+}
+
+// testElements create test tree
+func (t *Tree) testElements(count int) {
+	var r = rand.New(rand.NewSource(time.Now().UnixNano()))
+	for i := 0; i < count; i++ {
+		t.Add(uint64(r.Intn(9999)), i)
 	}
 }
